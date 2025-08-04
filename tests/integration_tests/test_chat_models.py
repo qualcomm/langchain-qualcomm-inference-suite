@@ -19,6 +19,7 @@ class TestChatQISIntegration(ChatModelIntegrationTests):
             "model": "Llama-3.2-1B",
             "temperature": 0,
             "max_retries": 1,
+            "stream_options": {"include_usage": True},
         }
 
     @property

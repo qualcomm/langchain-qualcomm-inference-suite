@@ -339,6 +339,9 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
             Whether to skip special tokens in the output.
         stop_token_ids: Optional[List[List[int]]]
             List of tokens that stop the generation when they are generated.
+        stream_options: Dict
+            Configure streaming outputs, like whether to return token usage when
+            streaming (``{"include_usage": True}``).
 
     Key init args — client params:
         timeout: Optional[float]
@@ -463,6 +466,7 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
     stop: Optional[List[str]] = None
     streaming: bool = False
     max_retries: int = 2
+    stream_options: Dict[str, Any] = Field(default_factory=dict)
 
     disabled_params: Optional[Dict[str, Any]] = Field(default=None)
     """Parameters of the Qualcomm Inference Suite client or chat.completions endpoint
@@ -541,11 +545,12 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
         for res in response["choices"]:
             message = _convert_dict_to_message(res["message"])
             if token_usage and isinstance(message, AIMessage):
-                message.usage_metadata = {
-                    "input_tokens": token_usage.get("prompt_tokens", 0),
-                    "output_tokens": token_usage.get("completion_tokens", 0),
-                    "total_tokens": token_usage.get("total_tokens", 0),
-                }
+                message.usage_metadata = UsageMetadata(
+                    input_tokens= token_usage.get("prompt_tokens", 0),
+                    output_tokens= token_usage.get("completion_tokens", 0),
+                    total_tokens= token_usage.get("total_tokens", 0),
+                )
+                message.response_metadata = {"model_name": self.model_name}
             generation_info = dict(finish_reason=res.get("finish_reason"))
             if "logprobs" in res:
                 generation_info["logprobs"] = res["logprobs"]
@@ -619,6 +624,11 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
         # We are already calling a stream method, so no need to pass this:
         params.pop("stream")
 
+        if not "stream_options" in params and self.stream_options:
+            params["stream_options"] = self.stream_options
+
+        response_metadata = {"model_name": self.model_name}
+
         default_chunk_class = AIMessageChunk
         for chunk in self.client.chat_stream(messages=message_dicts, **params):
             if not isinstance(chunk, dict):
@@ -632,7 +642,7 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
                     )
                     chunk = ChatGenerationChunk(
                         message=default_chunk_class(
-                            content="", usage_metadata=usage_metadata
+                            content="", usage_metadata=usage_metadata, response_metadata=response_metadata
                         )
                     )
                 else:
@@ -652,7 +662,7 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
                     generation_info["logprobs"] = logprobs
                 default_chunk_class = chunk.__class__
                 chunk = ChatGenerationChunk(
-                    message=chunk, generation_info=generation_info or None
+                    message=chunk, generation_info=generation_info or None, response_metadata=response_metadata,
                 )
             if run_manager:
                 run_manager.on_llm_new_token(chunk.text, chunk=chunk, logprobs=logprobs)
