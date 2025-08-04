@@ -106,6 +106,27 @@ def _convert_delta_to_message_chunk(
             ]
         except KeyError:
             pass
+    
+    # Handle case where tool call is in content as JSON string
+    if not tool_call_chunks and content and content.strip().startswith("{") and content.strip().endswith("}"):
+        try:
+            tool_call_data = json.loads(content)
+            if "name" in tool_call_data and "parameters" in tool_call_data:
+                # This looks like a tool call in JSON format
+                tool_id = tool_call_data.get("id", f"call_{id_}")
+                tool_call_chunks = [
+                    ToolCallChunk(
+                        name=tool_call_data["name"],
+                        args=tool_call_data["parameters"],
+                        id=tool_id,
+                        index=0,
+                    )
+                ]
+                # Clear content since we've extracted the tool call
+                content = ""
+        except (json.JSONDecodeError, KeyError):
+            # Not valid JSON or not a tool call format, keep content as is
+            pass
 
     if role == "user" or default_class == HumanMessageChunk:
         return HumanMessageChunk(content=content, id=id_)
@@ -265,6 +286,26 @@ def _convert_dict_to_message(_dict: Mapping[str, Any]) -> BaseMessage:
                     invalid_tool_calls.append(
                         make_invalid_tool_call(raw_tool_call, str(e))
                     )
+        
+        # Handle case where tool call is in content as JSON string
+        if not tool_calls and content and content.strip().startswith("{") and content.strip().endswith("}"):
+            try:
+                tool_call_data = json.loads(content)
+                if "name" in tool_call_data and "parameters" in tool_call_data:
+                    # This looks like a tool call in JSON format
+                    tool_id = tool_call_data.get("id", f"call_{id_}")
+                    tool_calls.append({
+                        "name": tool_call_data["name"],
+                        "args": tool_call_data["parameters"],
+                        "id": tool_id,
+                        "type": "tool_call"
+                    })
+                    # Clear content since we've extracted the tool call
+                    content = ""
+            except (json.JSONDecodeError, KeyError):
+                # Not valid JSON or not a tool call format, keep content as is
+                pass
+                
         return AIMessage(
             content=content,
             additional_kwargs=additional_kwargs,
@@ -499,7 +540,7 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
     max_retries: int = 2
     stream_options: Dict[str, Any] = Field(default_factory=dict)
 
-    disabled_params: Optional[Dict[str, Any]] = Field(default=None)
+    disabled_params: Optional[Dict[str, Any]] = Field(default_factory=dict)
     """Parameters of the Qualcomm AI Inference Suite client or chat.completions endpoint
     that should be disabled for the given model.
 
@@ -619,14 +660,24 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
         params = {"stop": stop, **params, **kwargs}
         params.pop("stream", "")
 
+        # Filter out unsupported parameters like 'tools'
+        filtered_params = self._filter_disabled_params(**params)
+        if "tools" in params and "tools" not in filtered_params:
+            # Tools were provided but filtered out - they're not supported
+            # We should mark this in disabled_params if not already there
+            if not self.disabled_params:
+                self.disabled_params = {}
+            if "tools" not in self.disabled_params:
+                self.disabled_params["tools"] = None
+
         if self.streaming:
             stream_iter = self.client.chat_stream(
                 messages=message_dicts,
-                **params,  # type: ignore
+                **filtered_params,  # type: ignore
             )
             return generate_from_stream(stream_iter)  # type: ignore
 
-        response = self.client.chat(messages=message_dicts, **params)
+        response = self.client.chat(messages=message_dicts, **filtered_params)
         return self._create_chat_result(response)
 
     def _stream(
@@ -658,10 +709,64 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
         if not "stream_options" in params and self.stream_options:
             params["stream_options"] = self.stream_options
 
+        # Filter out unsupported parameters like 'tools'
+        filtered_params = self._filter_disabled_params(**params)
+        if "tools" in params and "tools" not in filtered_params:
+            # Tools were provided but filtered out - they're not supported
+            # We should mark this in disabled_params if not already there
+            if not self.disabled_params:
+                self.disabled_params = {}
+            if "tools" not in self.disabled_params:
+                self.disabled_params["tools"] = None
+
         response_metadata = {"model_name": self.model_name}
 
+        # For tool calling tests, we need to use the non-streaming version
+        # because the streaming version doesn't support tool calls properly
+        if "tools" in params:
+            # Use non-streaming version and yield a single chunk
+            # Remove stream_options parameter as it's not supported by the chat method
+            chat_params = {k: v for k, v in filtered_params.items() if k != 'stream_options'}
+            response = self.client.chat(messages=message_dicts, **chat_params)
+            if not isinstance(response, dict):
+                response = response.model_dump()
+            
+            # Get the message from the response
+            message = _convert_dict_to_message(response["choices"][0]["message"])
+            
+            # Convert AIMessage to AIMessageChunk for streaming
+            if isinstance(message, AIMessage):
+                message_chunk = AIMessageChunk(
+                    content=message.content,
+                    additional_kwargs=message.additional_kwargs,
+                    tool_call_chunks=[
+                        ToolCallChunk(
+                            name=tc["name"],
+                            args=json.dumps(tc["args"]),
+                            id=tc["id"],
+                            index=i
+                        ) for i, tc in enumerate(message.tool_calls)
+                    ] if message.tool_calls else [],
+                )
+            else:
+                # This shouldn't happen, but just in case
+                message_chunk = AIMessageChunk(content=str(message.content))
+            
+            # Create a chunk from the message
+            chunk = ChatGenerationChunk(
+                message=message_chunk,
+                generation_info={"finish_reason": response["choices"][0].get("finish_reason")},
+                response_metadata=response_metadata,
+            )
+            
+            if run_manager:
+                run_manager.on_llm_new_token(chunk.text, chunk=chunk)
+            
+            yield chunk
+            return
+
         default_chunk_class = AIMessageChunk
-        for chunk in self.client.chat_stream(messages=message_dicts, **params):
+        for chunk in self.client.chat_stream(messages=message_dicts, **filtered_params):
             if not isinstance(chunk, dict):
                 chunk = chunk.model_dump()
             if len(chunk["choices"]) == 0:
@@ -711,9 +816,65 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
         # We are already calling a stream method, so no need to pass this:
         params.pop("stream")
 
+        # Filter out unsupported parameters like 'tools'
+        filtered_params = self._filter_disabled_params(**params)
+        if "tools" in params and "tools" not in filtered_params:
+            # Tools were provided but filtered out - they're not supported
+            # We should mark this in disabled_params if not already there
+            if not self.disabled_params:
+                self.disabled_params = {}
+            if "tools" not in self.disabled_params:
+                self.disabled_params["tools"] = None
+                
+        response_metadata = {"model_name": self.model_name}
+        
+        # For tool calling tests, we need to use the non-streaming version
+        # because the streaming version doesn't support tool calls properly
+        if "tools" in params:
+            # Use non-streaming version and yield a single chunk
+            # Remove stream_options parameter as it's not supported by the chat method
+            chat_params = {k: v for k, v in filtered_params.items() if k != 'stream_options'}
+            response = await self.async_client.chat(messages=message_dicts, **chat_params)
+            if not isinstance(response, dict):
+                response = response.model_dump()
+            
+            # Get the message from the response
+            message = _convert_dict_to_message(response["choices"][0]["message"])
+            
+            # Convert AIMessage to AIMessageChunk for streaming
+            if isinstance(message, AIMessage):
+                message_chunk = AIMessageChunk(
+                    content=message.content,
+                    additional_kwargs=message.additional_kwargs,
+                    tool_call_chunks=[
+                        ToolCallChunk(
+                            name=tc["name"],
+                            args=json.dumps(tc["args"]),
+                            id=tc["id"],
+                            index=i
+                        ) for i, tc in enumerate(message.tool_calls)
+                    ] if message.tool_calls else [],
+                )
+            else:
+                # This shouldn't happen, but just in case
+                message_chunk = AIMessageChunk(content=str(message.content))
+            
+            # Create a chunk from the message
+            chunk = ChatGenerationChunk(
+                message=message_chunk,
+                generation_info={"finish_reason": response["choices"][0].get("finish_reason")},
+                response_metadata=response_metadata,
+            )
+            
+            if run_manager:
+                await run_manager.on_llm_new_token(chunk.text, chunk=chunk)
+            
+            yield chunk
+            return
+
         default_chunk_class = AIMessageChunk
         async for chunk in self.async_client.chat_stream(
-            messages=message_dicts, **params
+            messages=message_dicts, **filtered_params
         ):
             if not isinstance(chunk, dict):
                 chunk = chunk.model_dump()
@@ -765,16 +926,26 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
         params = {**params, **kwargs}
         params.pop("stream", "")
 
+        # Filter out unsupported parameters like 'tools'
+        filtered_params = self._filter_disabled_params(**params)
+        if "tools" in params and "tools" not in filtered_params:
+            # Tools were provided but filtered out - they're not supported
+            # We should mark this in disabled_params if not already there
+            if not self.disabled_params:
+                self.disabled_params = {}
+            if "tools" not in self.disabled_params:
+                self.disabled_params["tools"] = None
+
         should_stream = (
             kwargs["stream"] if kwargs.get("stream") is not None else self.streaming
         )
         if should_stream:
             stream_iter = self._astream(
-                messages=messages, stop=stop, run_manager=run_manager, **params
+                messages=messages, stop=stop, run_manager=run_manager, **filtered_params
             )
             return await agenerate_from_stream(stream_iter)
 
-        response = await self.async_client.chat(messages=message_dicts, **params)
+        response = await self.async_client.chat(messages=message_dicts, **filtered_params)
 
         return self._create_chat_result(response)
 
