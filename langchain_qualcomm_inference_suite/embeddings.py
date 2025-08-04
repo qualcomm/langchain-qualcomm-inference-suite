@@ -13,7 +13,7 @@ from langchain_qualcomm_inference_suite.mixins import BaseLangChainMixin
 
 
 class QISEmbeddings(Embeddings, BaseModel, BaseLangChainMixin):
-    """Qualcomm Inference Suite embedding model integration.
+    """Qualcomm AI Inference Suite embedding model integration.
 
     Setup:
         Install ``langchain-qualcomm-inference-suite`` and set environment variables
@@ -35,10 +35,10 @@ class QISEmbeddings(Embeddings, BaseModel, BaseLangChainMixin):
         max_retries: int
             Max number of retries.
         api_key: Optional[str]
-            Qualcomm Inference Suite API key. If not passed in will be read from env var
+            Qualcomm AI Inference Suite API key. If not passed in will be read from env var
             IMAGINE_API_KEY.
         endpoint: Optional[str]
-            Qualcomm Inference Suite API endpoint. If not passed in will be read from
+            Qualcomm AI Inference Suite API endpoint. If not passed in will be read from
             env var IMAGINE_API_ENDPOINT.
 
     See full list of supported init args and their descriptions in the params section.

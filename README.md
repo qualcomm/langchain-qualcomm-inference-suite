@@ -18,7 +18,7 @@ And you should configure credentials by setting the following environment variab
 
 ## Chat Models
 
-`ChatQIS` class exposes chat models from Qualcomm Inference Suite.
+`ChatQIS` class exposes chat models from Qualcomm AI Inference Suite.
 
 ```python
 from langchain_qualcomm_inference_suite import ChatQIS
@@ -29,7 +29,7 @@ llm.invoke("Sing a ballad of LangChain.")
 
 ## Embeddings
 
-`QISEmbeddings` class exposes embeddings from Qualcomm Inference Suite.
+`QISEmbeddings` class exposes embeddings from Qualcomm AI Inference Suite.
 
 ```python
 from langchain_qualcomm_inference_suite import QISEmbeddings
@@ -39,7 +39,7 @@ embeddings.embed_query("What is the meaning of life?")
 ```
 
 ## LLMs
-`QISLLM` class exposes LLMs from Qualcomm Inference Suite.
+`QISLLM` class exposes LLMs from Qualcomm AI Inference Suite.
 
 ```python
 from langchain_qualcomm_inference_suite import QISLLM

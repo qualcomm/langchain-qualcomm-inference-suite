@@ -18,7 +18,7 @@ from langchain_qualcomm_inference_suite.mixins import BaseLangChainMixin
 
 
 class QISLLM(LLM, BaseLangChainMixin):
-    """Qualcomm Inference Suite large language models.
+    """Qualcomm AI Inference Suite large language models.
 
     To use, you should have the environment variable ``IMAGINE_API_KEY``
     set with your API key, or pass it as a named parameter to the constructor.

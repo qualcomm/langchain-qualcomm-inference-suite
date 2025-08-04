@@ -3,7 +3,7 @@ Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 
 SPDX-License-Identifier: BSD-3-Clause
 
-Qualcomm Inference Suite chat models.
+Qualcomm AI Inference Suite chat models.
 """
 
 import json
@@ -295,7 +295,7 @@ def _convert_dict_to_message(_dict: Mapping[str, Any]) -> BaseMessage:
 
 
 class ChatQIS(BaseChatModel, BaseLangChainMixin):
-    """Qualcomm Inference Suite chat model integration.
+    """Qualcomm AI Inference Suite chat model integration.
 
     Setup:
         Install ``langchain-qualcomm-inference-suite`` and set environment variables
@@ -309,7 +309,7 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
 
     Key init args — completion params:
         model: str
-            Name of Qualcomm Inference Suite model to use.
+            Name of Qualcomm AI Inference Suite model to use.
         temperature: float
             Sampling temperature.
         max_tokens: Optional[int]
@@ -352,10 +352,10 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
         max_retries: int
             Max number of retries.
         api_key: Optional[str]
-            Qualcomm Inference Suite API key. If not passed in will be read from env var
+            Qualcomm AI Inference Suite API key. If not passed in will be read from env var
             IMAGINE_API_KEY.
         endpoint: Optional[str]
-            Qualcomm Inference Suite API endpoint. If not passed in will be read from env
+            Qualcomm AI Inference Suite API endpoint. If not passed in will be read from env
             var IMAGINE_API_ENDPOINT.
 
     See full list of supported init args and their descriptions in the params section.
@@ -500,7 +500,7 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
     stream_options: Dict[str, Any] = Field(default_factory=dict)
 
     disabled_params: Optional[Dict[str, Any]] = Field(default=None)
-    """Parameters of the Qualcomm Inference Suite client or chat.completions endpoint
+    """Parameters of the Qualcomm AI Inference Suite client or chat.completions endpoint
     that should be disabled for the given model.
 
     Should be specified as ``{"param": None | ['val1', 'val2']}`` where the key is the 
