@@ -16,7 +16,7 @@ class TestChatQISIntegration(ChatModelIntegrationTests):
     def chat_model_params(self) -> dict:
         # These should be parameters used to initialize your integration for testing
         return {
-            "model": "Llama-3.2-1B",
+            "model": "Llama-3.3-70B",
             "temperature": 0,
             "max_retries": 1,
             "stream_options": {"include_usage": True},
