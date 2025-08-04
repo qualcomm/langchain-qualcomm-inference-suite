@@ -18,7 +18,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    cast,
+    cast, Sequence, Callable, Literal,
 )
 
 from imagine import ChatCompletionStreamResponse
@@ -26,7 +26,7 @@ from langchain_core.callbacks import (
     AsyncCallbackManagerForLLMRun,
     CallbackManagerForLLMRun,
 )
-from langchain_core.language_models import BaseChatModel
+from langchain_core.language_models import BaseChatModel, LanguageModelInput
 from langchain_core.language_models.chat_models import (
     agenerate_from_stream,
     generate_from_stream,
@@ -56,6 +56,9 @@ from langchain_core.output_parsers.openai_tools import (
     parse_tool_call,
 )
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
+from langchain_core.runnables import Runnable
+from langchain_core.tools import BaseTool
+from langchain_core.utils.function_calling import convert_to_openai_tool
 from pydantic import BaseModel, Field
 
 from langchain_qualcomm_inference_suite.mixins import BaseLangChainMixin
@@ -432,6 +435,34 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
             # batch:
             # await llm.abatch([messages])
 
+    Tool calling:
+        .. code-block:: python
+
+            from pydantic import BaseModel, Field
+
+            class GetWeather(BaseModel):
+                '''Get the current weather in a given location'''
+
+                location: str = Field(..., description="The city and state, e.g. San Francisco, CA")
+
+            class GetPopulation(BaseModel):
+                '''Get the current population in a given location'''
+
+                location: str = Field(..., description="The city and state, e.g. San Francisco, CA")
+
+            llm_with_tools = llm.bind_tools([GetWeather, GetPopulation])
+            ai_msg = llm_with_tools.invoke("Which city is hotter today and which is bigger: LA or NY?")
+            ai_msg.tool_calls
+
+        .. code-block:: python
+        
+            [{'name': 'GetWeather',
+              'args': {'location': 'Los Angeles, CA'},
+              'id': 'dce3c9d9-98d5-4742-b70b-5ffca6a2ffe8',
+              'type': 'tool_call'}]
+
+        See ``ChatQIS.bind_tools()`` method for more.
+        
     Token usage:
         .. code-block:: python
 
@@ -761,3 +792,19 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
             else:
                 filtered[k] = v
         return filtered
+
+    def bind_tools(
+            self,
+            tools: Sequence[Union[dict[str, Any], Type[BaseModel], Callable, BaseTool]],
+            *,
+            tool_choice: Optional[
+                Union[dict, str, Literal["auto", "any", "none"], bool]
+            ] = None,
+            **kwargs: Any,
+    ) -> Runnable[LanguageModelInput, BaseMessage]:
+        if tool_choice in {"any", "none"}:
+            tool_choice = "auto"
+
+        formatted_tools = [convert_to_openai_tool(tool) for tool in tools]
+
+        return super().bind(tools=formatted_tools, **kwargs)
