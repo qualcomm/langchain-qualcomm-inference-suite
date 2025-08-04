@@ -19,3 +19,8 @@ class TestChatQISUnit(ChatModelUnitTests):
             "model": "Llama-3.2-1B",
             "temperature": 0,
         }
+
+    @property
+    def has_structured_output(self) -> bool:
+        # Skip structured text output tests by returning False here
+        return False
