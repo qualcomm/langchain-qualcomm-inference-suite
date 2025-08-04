@@ -32,7 +32,7 @@ class BaseLangChainMixin:
             if param in values:
                 client_params[param] = values.pop(param)
 
-        values["client"] = ImagineClient(**client_params, debug=True)
-        values["async_client"] = ImagineAsyncClient(**client_params, debug=True)
+        values["client"] = ImagineClient(**client_params)
+        values["async_client"] = ImagineAsyncClient(**client_params)
 
         return values
