@@ -23,7 +23,7 @@ class QISEmbeddings(Embeddings, BaseModel, BaseLangChainMixin):
 
             pip install -U langchain-qualcomm-inference-suite
             export IMAGINE_API_KEY="your-api-key"
-            export IMAGINE_ENDPOINT_URL="https://my-endpoint/api/v2"
+            export IMAGINE_API_ENDPOINT="https://my-endpoint/api/v2"
 
     Key init args — completion params:
         model: str

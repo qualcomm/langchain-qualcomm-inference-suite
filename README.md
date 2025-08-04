@@ -13,7 +13,7 @@ And you should configure credentials by setting the following environment variab
 1. You must set the environment variable `IMAGINE_API_KEY` to your
    personal Imagine API key.
 
-2. You must set the environment variable `IMAGINE_ENDPOINT_URL` pointing to the
+2. You must set the environment variable `IMAGINE_API_ENDPOINT` pointing to the
    endpoint you are using.
 
 ## Chat Models
