@@ -25,12 +25,14 @@ class BaseLangChainMixin:
         client_params = {
             "endpoint": values.pop("endpoint", None),
             "api_key": values.pop("api_key", None),
-            "max_retries": values.pop("max_retries", None),
-            "timeout": values.pop("timeout", None),
-            "verify": values.pop("verify", None),
         }
 
-        values["client"] = ImagineClient(**client_params)
-        values["async_client"] = ImagineAsyncClient(**client_params)
+        optional_client_params = ["max_retries", "timeout", "verify", "proxy", "debug"]
+        for param in optional_client_params:
+            if param in values:
+                client_params[param] = values.pop(param)
+
+        values["client"] = ImagineClient(**client_params, debug=True)
+        values["async_client"] = ImagineAsyncClient(**client_params, debug=True)
 
         return values
