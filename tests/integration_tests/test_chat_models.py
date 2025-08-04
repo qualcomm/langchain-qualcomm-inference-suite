@@ -24,5 +24,13 @@ class TestChatQISIntegration(ChatModelIntegrationTests):
 
     @property
     def has_structured_output(self) -> bool:
-        # Skip structured text output tests by returning False here
+        return True
+
+    @property
+    def supports_json_mode(self) -> bool:
+        return False
+        
+    @property
+    def has_tool_choice(self) -> bool:
+        # Disable tool choice tests as the API doesn't properly support tool_choice
         return False
