@@ -94,7 +94,7 @@ class QISEmbeddings(Embeddings, BaseModel, BaseLangChainMixin):
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Embed search docs."""
         try:
-            response = self.client.embeddings(texts=texts, model=self.model)
+            response = self.client.embeddings(text=texts, model=self.model)
 
             return [embedding_obj.embedding for embedding_obj in response.data]
         except Exception:
