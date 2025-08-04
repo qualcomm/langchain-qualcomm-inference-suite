@@ -24,7 +24,7 @@ class QISLLM(LLM, BaseLangChainMixin):
     set with your API key, or pass it as a named parameter to the constructor.
     """
 
-    model: str = "Llama-3.1-8B"
+    model: str = "Llama-3.2-1B"
 
     temperature: float = 0.0
     max_tokens: Optional[int] = None

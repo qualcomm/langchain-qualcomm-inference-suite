@@ -16,6 +16,6 @@ class TestChatQISUnit(ChatModelUnitTests):
     def chat_model_params(self) -> dict:
         # These should be parameters used to initialize your integration for testing
         return {
-            "model": "Llama-3.1-8B",
+            "model": "Llama-3.2-1B",
             "temperature": 0,
         }

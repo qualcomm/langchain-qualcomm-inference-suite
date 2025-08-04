@@ -360,7 +360,7 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
             from langchain_qualcomm_inference_suite import ChatQIS
 
             llm = ChatQIS(
-                model="Llama-3.1-8B",
+                model="Llama-3.2-1B",
                 temperature=0,
                 max_tokens=None,
                 timeout=None,
@@ -384,7 +384,7 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
             AIMessage(content='The translation of "I love programming" to French
             is:\n\n"J\'adore le programmation."', additional_kwargs={},
             response_metadata={'token_usage': {'prompt_tokens': 33, 'total_tokens': 55,
-            'completion_tokens': 22}, 'model_name': 'Llama-3.1-8B',
+            'completion_tokens': 22}, 'model_name': 'Llama-3.2-1B',
             'system_fingerprint': '', 'finish_reason': <FinishReason.stop: 'stop'>},
             id='run-c182fb49-12dc-4790-841c-d781418c4364-0',
             usage_metadata={'input_tokens': 33, 'output_tokens': 22,
@@ -448,7 +448,7 @@ class ChatQIS(BaseChatModel, BaseLangChainMixin):
         .. code-block:: python
 
              {'token_usage': {'prompt_tokens': 33, 'total_tokens': 55,
-             'completion_tokens': 22}, 'model_name': 'Llama-3.1-8B',
+             'completion_tokens': 22}, 'model_name': 'Llama-3.2-1B',
              'system_fingerprint': '', 'finish_reason': <FinishReason.stop: 'stop'>}
 
     """  # noqa: E501
