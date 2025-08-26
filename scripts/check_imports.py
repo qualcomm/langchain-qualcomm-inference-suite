@@ -1,3 +1,11 @@
+"""
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+
+SPDX-License-Identifier: BSD-3-Clause
+
+Script to check imports.
+"""
+
 import sys
 import traceback
 from importlib.machinery import SourceFileLoader

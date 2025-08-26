@@ -1,4 +1,10 @@
-"""Test QIS embeddings."""
+"""
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+
+SPDX-License-Identifier: BSD-3-Clause
+
+Test QIS embeddings.
+"""
 
 from typing import Type
 

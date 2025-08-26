@@ -1,4 +1,10 @@
-"""Test embedding model integration."""
+"""
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+
+SPDX-License-Identifier: BSD-3-Clause
+
+Test embedding model integration.
+"""
 
 from typing import Type
 
